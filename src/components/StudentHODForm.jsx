@@ -61,7 +61,7 @@ export default function StudentHODForm({ onSubmitRequest }) {
             className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500"
             value={formData.studentName}
             onChange={(e) => setFormData({ ...formData, studentName: e.target.value })}
-            placeholder="e.g. Santhosh Reddy"
+            placeholder="Your Name as per college records "
           />
         </div>
 
@@ -75,7 +75,7 @@ export default function StudentHODForm({ onSubmitRequest }) {
             className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500"
             value={formData.usn}
             onChange={(e) => setFormData({ ...formData, usn: e.target.value.toUpperCase() })}
-            placeholder="e.g. 1AT23CS001"
+            placeholder="e.g. 1AT25CSXXX or 1TT25CSXXX"
           />
         </div>
       </div>
@@ -90,10 +90,11 @@ export default function StudentHODForm({ onSubmitRequest }) {
             value={formData.department}
             onChange={(e) => setFormData({ ...formData, department: e.target.value })}
           >
-            <option value="CSE">CSE</option>
+            <option value="CSE">CSE(CSE & Allied branches)</option>
             <option value="ECE">ECE</option>
             <option value="ME">Mechanical</option>
             <option value="CIVIL">Civil</option>
+            <option value="Basic Science">Basic Science</option>
           </select>
         </div>
 
