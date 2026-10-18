@@ -86,10 +86,17 @@ export default function App() {
   };
 
   // Securely transmit the student's request to Firestore
-  const handleNewRequest = async (newReq) => {
+ const handleNewRequest = async (newReq) => {
     const now = new Date();
+
+    // 1. Separate the raw file objects from the rest of the form's text data
+    const { idCardFile, additionalDocs, ...cleanRequestData } = newReq;
+
+    // 2. Build the payload using only text strings and numbers
     const requestPayload = {
-      ...newReq,
+      ...cleanRequestData,
+      // Store just the name of the file as text, so Firestore accepts it
+      idCardFileName: idCardFile ? idCardFile.name : 'No file uploaded',
       email: loginEmail, 
       status: 'Pending',
       timestamp: `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
@@ -105,7 +112,6 @@ export default function App() {
       alert("Failed to connect to the database. Please try again.");
     }
   };
-
   const handleUpdateStatus = async (id, newStatus, reply) => {
     try {
       // 1. Update the document in the Firebase cloud
