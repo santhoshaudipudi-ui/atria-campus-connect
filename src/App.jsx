@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserCheck, Search, Shield, LogOut, GraduationCap, ArrowRight, ArrowLeft, Mail, Lock } from 'lucide-react';
 import StudentHODForm from './components/StudentHODForm';
 import StaffSearch from './components/StaffSearch';
 import HODDashboard from './components/HODDashboard';
-import { initialStaffList, initialRequests } from './data/mockData';
+import { initialStaffList } from './data/mockData';
+import { collection, addDoc, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { db } from './config/firebase'; 
+import { collection, addDoc, getDocs } from 'firebase/firestore';
 
 export default function App() {
   const [view, setView] = useState('LANDING'); 
@@ -20,9 +23,28 @@ export default function App() {
   const [hodPassword, setHodPassword] = useState('');
   const [hodError, setHodError] = useState('');
 
-  const [requests, setRequests] = useState(initialRequests);
+  // Initialized as an empty array since data now comes from the cloud
+  const [requests, setRequests] = useState([]);
   const [staffList] = useState(initialStaffList);
   const [historySort, setHistorySort] = useState('NEWEST');
+
+  // Pull live data from Firestore when the app loads
+  useEffect(() => {
+    const fetchCloudRequests = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'requests'));
+        const cloudRequests = [];
+        querySnapshot.forEach((doc) => {
+          cloudRequests.push({ id: doc.id, ...doc.data() });
+        });
+        setRequests(cloudRequests);
+      } catch (error) {
+        console.error("Error fetching requests from cloud: ", error);
+      }
+    };
+    
+    fetchCloudRequests();
+  }, []);
 
   const handleStudentAuth = (e) => {
     e.preventDefault();
@@ -64,24 +86,44 @@ export default function App() {
     setIsSignUp(false);
   };
 
-  const handleNewRequest = (newReq) => {
+  // Securely transmit the student's request to Firestore
+  const handleNewRequest = async (newReq) => {
     const now = new Date();
-    const formattedRequest = {
+    const requestPayload = {
       ...newReq,
-      id: `req-${now.getTime()}`,
       email: loginEmail, 
       status: 'Pending',
-      timestamp: `${now.toLocaleDateString()} - ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      timestamp: `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
       rawDate: now.getTime(),
       hodReply: ''
     };
-    setRequests([formattedRequest, ...requests]);
+
+    try {
+      const docRef = await addDoc(collection(db, 'requests'), requestPayload);
+      setRequests([{ ...requestPayload, id: docRef.id }, ...requests]);
+    } catch (error) {
+      console.error("Error adding document to cloud: ", error);
+      alert("Failed to connect to the database. Please try again.");
+    }
   };
 
-  const handleUpdateStatus = (id, newStatus, reply) => {
-    setRequests(requests.map(req => 
-      req.id === id ? { ...req, status: newStatus, hodReply: reply } : req
-    ));
+  const handleUpdateStatus = async (id, newStatus, reply) => {
+    try {
+      // 1. Update the document in the Firebase cloud
+      const requestRef = doc(db, 'requests', id);
+      await updateDoc(requestRef, {
+        status: newStatus,
+        hodReply: reply
+      });
+      
+      // 2. Update the local screen instantly
+      setRequests(requests.map(req => 
+        req.id === id ? { ...req, status: newStatus, hodReply: reply } : req
+      ));
+    } catch (error) {
+      console.error("Error updating status in cloud: ", error);
+      alert("Failed to save the HOD response to the database.");
+    }
   };
 
   const myRequests = requests

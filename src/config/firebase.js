@@ -1,15 +1,17 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Replace these values with your Firebase project configuration
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_API_KEY",
+  apiKey: "AIzaSyCoceOyZDNvXpymAP-CUogSghlWbyHaTQ8",
   authDomain: "atria-campus-connect.firebaseapp.com",
   projectId: "atria-campus-connect",
-  storageBucket: "atria-campus-connect.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abcdef123456"
+  storageBucket: "atria-campus-connect.firebasestorage.app",
+  messagingSenderId: "214973037312",
+  appId: "1:214973037312:web:3405c2522a6037d4b291e5"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
