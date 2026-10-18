@@ -4,8 +4,11 @@ import StudentHODForm from './components/StudentHODForm';
 import StaffSearch from './components/StaffSearch';
 import HODDashboard from './components/HODDashboard';
 import { initialStaffList } from './data/mockData';
-import { collection, addDoc, getDocs, doc, updateDoc } from 'firebase/firestore';
+
+// Firebase Imports for Database and Auth (Storage removed for free tier)
 import { db } from './config/firebase'; 
+import { collection, addDoc, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 
 export default function App() {
   const [view, setView] = useState('LANDING'); 
@@ -22,12 +25,13 @@ export default function App() {
   const [hodPassword, setHodPassword] = useState('');
   const [hodError, setHodError] = useState('');
 
-  // Initialized as an empty array since data now comes from the cloud
   const [requests, setRequests] = useState([]);
   const [staffList] = useState(initialStaffList);
   const [historySort, setHistorySort] = useState('NEWEST');
 
-  // Pull live data from Firestore when the app loads
+  // Initialize Firebase Auth using your existing app connection
+  const auth = getAuth(db.app);
+
   useEffect(() => {
     const fetchCloudRequests = async () => {
       try {
@@ -45,33 +49,50 @@ export default function App() {
     fetchCloudRequests();
   }, []);
 
-  const handleStudentAuth = (e) => {
+  const handleStudentAuth = async (e) => {
     e.preventDefault();
     if (!loginEmail.toLowerCase().endsWith('@atria.edu.in')) {
       setLoginError('Access denied: You must use your official @atria.edu.in college email ID.');
       return;
     }
-    if (loginPassword.length < 6) {
-      setLoginError('Password must be at least 6 characters long.');
-      return;
+
+    try {
+      if (isSignUp) {
+        // Creates a real, encrypted user account in Firebase
+        await createUserWithEmailAndPassword(auth, loginEmail, loginPassword);
+      } else {
+        // Verifies the password against the database
+        await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      }
+      setLoginError('');
+      setView('STUDENT');
+      setStudentTab('MENU');
+    } catch (error) {
+      console.error("Auth Error:", error);
+      if (error.code === 'auth/email-already-in-use') {
+        setLoginError('An account with this email already exists. Switch to Login.');
+      } else {
+        setLoginError('Invalid email or incorrect password.');
+      }
     }
-    setLoginError('');
-    setView('STUDENT');
-    setStudentTab('MENU');
   };
 
-  const handleHODAuth = (e) => {
+  const handleHODAuth = async (e) => {
     e.preventDefault();
     if (!hodEmail.toLowerCase().endsWith('@atria.edu.in')) {
       setHodError('Access denied: You must use an official HOD @atria.edu.in email ID.');
       return;
     }
-    if (hodPassword.length < 6) {
-      setHodError('Invalid HOD password.');
-      return;
+    
+    try {
+      // Verifies the HOD password securely
+      await signInWithEmailAndPassword(auth, hodEmail, hodPassword);
+      setHodError('');
+      setView('HOD');
+    } catch (error) {
+      console.error("HOD Auth Error:", error);
+      setHodError('Invalid HOD credentials or account does not exist.');
     }
-    setHodError('');
-    setView('HOD');
   };
 
   const handleLogout = () => {
@@ -85,18 +106,22 @@ export default function App() {
     setIsSignUp(false);
   };
 
-  // Securely transmit the student's request to Firestore
- const handleNewRequest = async (newReq) => {
-    const now = new Date();
+  const handleNewRequest = async (newReq) => {
+    // 1. Strict USN Validation Check
+    const usnRegex = /^(1AT|1TT)25CS\d+$/i;
+    if (newReq.usn && !usnRegex.test(newReq.usn)) {
+      alert("Invalid USN format. It must start with 1AT25CS or 1TT25CS followed by numbers (e.g., 1AT25CS001).");
+      return; 
+    }
 
-    // 1. Separate the raw file objects from the rest of the form's text data
+    const now = new Date();
     const { idCardFile, additionalDocs, ...cleanRequestData } = newReq;
 
-    // 2. Build the payload using only text strings and numbers
+    // 2. Save only the text data to avoid the Blaze plan requirement
     const requestPayload = {
       ...cleanRequestData,
-      // Store just the name of the file as text, so Firestore accepts it
       idCardFileName: idCardFile ? idCardFile.name : 'No file uploaded',
+      idCardUrl: null, // Bypassing image storage to stay on the free tier
       email: loginEmail, 
       status: 'Pending',
       timestamp: `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
@@ -107,21 +132,21 @@ export default function App() {
     try {
       const docRef = await addDoc(collection(db, 'requests'), requestPayload);
       setRequests([{ ...requestPayload, id: docRef.id }, ...requests]);
+      alert("Request submitted successfully!");
     } catch (error) {
       console.error("Error adding document to cloud: ", error);
       alert("Failed to connect to the database. Please try again.");
     }
   };
+
   const handleUpdateStatus = async (id, newStatus, reply) => {
     try {
-      // 1. Update the document in the Firebase cloud
       const requestRef = doc(db, 'requests', id);
       await updateDoc(requestRef, {
         status: newStatus,
         hodReply: reply
       });
       
-      // 2. Update the local screen instantly
       setRequests(requests.map(req => 
         req.id === id ? { ...req, status: newStatus, hodReply: reply } : req
       ));
