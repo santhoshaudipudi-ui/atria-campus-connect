@@ -6,7 +6,6 @@ import HODDashboard from './components/HODDashboard';
 import { initialStaffList } from './data/mockData';
 import { collection, addDoc, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from './config/firebase'; 
-import { collection, addDoc, getDocs } from 'firebase/firestore';
 
 export default function App() {
   const [view, setView] = useState('LANDING'); 
