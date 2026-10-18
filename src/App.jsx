@@ -79,19 +79,23 @@ export default function App() {
 
   const handleHODAuth = async (e) => {
     e.preventDefault();
-    if (!hodEmail.toLowerCase().endsWith('@atria.edu.in')) {
-      setHodError('Access denied: You must use an official HOD @atria.edu.in email ID.');
+    
+    // 1. The one and only authorized HOD email
+    const OFFICIAL_HOD_EMAIL = 'hod.cse@atria.edu.in';
+    
+    if (hodEmail.toLowerCase() !== OFFICIAL_HOD_EMAIL) {
+      setHodError(`Access denied: Only ${OFFICIAL_HOD_EMAIL} is authorized for this portal.`);
       return;
     }
     
     try {
-      // Verifies the HOD password securely
+      // 2. Verifies the password securely against Firebase
       await signInWithEmailAndPassword(auth, hodEmail, hodPassword);
       setHodError('');
       setView('HOD');
     } catch (error) {
       console.error("HOD Auth Error:", error);
-      setHodError('Invalid HOD credentials or account does not exist.');
+      setHodError('Invalid HOD password.');
     }
   };
 
