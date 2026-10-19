@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Clock, CheckCircle, Search, Filter, ExternalLink, User, MessageSquare, Send, Mail, MapPin, Building2, BookOpen, Briefcase, Lightbulb, Award } from 'lucide-react';
+import { LayoutDashboard, Clock, CheckCircle, Search, Filter, ExternalLink, User, MessageSquare, Send, Mail, MapPin, Building2, BookOpen, Briefcase, Lightbulb, Award, XCircle } from 'lucide-react';
 
 export default function HODDashboard({ requests, onUpdateStatus }) {
   const [filterStatus, setFilterStatus] = useState('All');
@@ -11,28 +11,40 @@ export default function HODDashboard({ requests, onUpdateStatus }) {
   const resolvedCount = requests.filter(r => r.status !== 'Pending').length;
   const totalCount = requests.length;
 
-  // Filter and Search Logic
-  const filteredRequests = requests.filter(req => {
-    const matchesFilter = filterStatus === 'All' || 
-                         (filterStatus === 'Pending' && req.status === 'Pending') ||
-                         (filterStatus === 'Resolved' && req.status !== 'Pending');
-    
-    const matchesSearch = (req.usn && req.usn.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                          (req.email && req.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                          (req.reason && req.reason.toLowerCase().includes(searchQuery.toLowerCase()));
-                          
-    return matchesFilter && matchesSearch;
-  });
+  // Filter, Search, and Sort Logic (Sorted newest to oldest)
+  const filteredRequests = requests
+    .filter(req => {
+      const matchesFilter = filterStatus === 'All' || 
+                           (filterStatus === 'Pending' && req.status === 'Pending') ||
+                           (filterStatus === 'Resolved' && req.status !== 'Pending');
+      
+      const matchesSearch = (req.usn && req.usn.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                            (req.email && req.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                            (req.reason && req.reason.toLowerCase().includes(searchQuery.toLowerCase()));
+                            
+      return matchesFilter && matchesSearch;
+    })
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   const handleReplyChange = (id, text) => {
     setReplyTexts({ ...replyTexts, [id]: text });
   };
 
   const submitStatusUpdate = (id, newStatus) => {
-    const reply = replyTexts[id] || (newStatus === 'Approved' ? 'Request Approved.' : 'Request Denied.');
-    onUpdateStatus(id, newStatus, reply);
-    
-    // Clear the input after submitting
+    let currentReply = replyTexts[id] ? replyTexts[id].trim() : '';
+
+    if (newStatus === 'Rejected') {
+      if (!currentReply || currentReply.toLowerCase().startsWith('approved')) {
+        currentReply = 'Request Denied. Please contact the HOD office for further clarification.';
+      }
+    } else if (newStatus === 'Approved') {
+      if (!currentReply || currentReply.toLowerCase().startsWith('denied') || currentReply.toLowerCase().startsWith('request denied')) {
+        currentReply = 'Request Approved. Please visit my cabin during office hours.';
+      }
+    }
+
+    onUpdateStatus(id, newStatus, currentReply);
+
     const updatedReplies = { ...replyTexts };
     delete updatedReplies[id];
     setReplyTexts(updatedReplies);
@@ -47,7 +59,6 @@ export default function HODDashboard({ requests, onUpdateStatus }) {
       
       {/* HOD Profile Banner */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden">
-        {/* Decorative Background Element */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-50 pointer-events-none"></div>
         
         <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center border-4 border-white shadow-md shrink-0 relative z-10 overflow-hidden">
@@ -212,7 +223,7 @@ export default function HODDashboard({ requests, onUpdateStatus }) {
                       </a>
                     ) : (
                       <p className="text-sm text-slate-700 mt-1 flex items-center">
-                         {req.idCardFileName} 
+                         {req.idCardFileName || 'ID Card Uploaded'} 
                       </p>
                     )}
                   </div>
@@ -243,10 +254,11 @@ export default function HODDashboard({ requests, onUpdateStatus }) {
                 {/* HOD Action Area */}
                 {req.status === 'Pending' ? (
                   <div className="mt-6 space-y-3">
-                    <div className="flex space-x-2 mb-2">
-                      <button onClick={() => insertQuickReply(req.id, 'Approved. Please come to my cabin at 2:00 PM.')} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded transition">Meet at 2 PM</button>
-                      <button onClick={() => insertQuickReply(req.id, 'Approved. Your request has been forwarded.')} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded transition">Forwarded</button>
-                      <button onClick={() => insertQuickReply(req.id, 'Denied. Please submit proper documentation.')} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded transition">Need Docs</button>
+                    {/* Updated Quick Reply Category */}
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      <button onClick={() => insertQuickReply(req.id, 'Approved. Please meet me tomorrow in my cabin.')} className="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium px-2.5 py-1 rounded transition border border-emerald-200">Meet Tomorrow</button>
+                      <button onClick={() => insertQuickReply(req.id, 'Approved. Please wait outside my cabin.')} className="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium px-2.5 py-1 rounded transition border border-emerald-200">Wait Outside</button>
+                      <button onClick={() => insertQuickReply(req.id, 'Approved. Meet me today at 4:00 PM.')} className="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium px-2.5 py-1 rounded transition border border-emerald-200">Meet at 4 PM</button>
                     </div>
                     
                     <textarea 
@@ -260,13 +272,13 @@ export default function HODDashboard({ requests, onUpdateStatus }) {
                     <div className="flex justify-end space-x-3">
                       <button 
                         onClick={() => submitStatusUpdate(req.id, 'Rejected')}
-                        className="px-4 py-2 bg-rose-50 text-rose-700 font-medium rounded-md hover:bg-rose-100 transition"
+                        className="flex items-center px-4 py-2 bg-rose-50 text-rose-700 font-medium rounded-md hover:bg-rose-100 transition border border-rose-200"
                       >
-                        Reject
+                        <XCircle className="w-4 h-4 mr-1.5" /> Reject
                       </button>
                       <button 
                         onClick={() => submitStatusUpdate(req.id, 'Approved')}
-                        className="flex items-center px-4 py-2 bg-slate-900 text-white font-medium rounded-md hover:bg-slate-800 transition"
+                        className="flex items-center px-4 py-2 bg-slate-900 text-white font-medium rounded-md hover:bg-slate-800 transition shadow-sm"
                       >
                         <Send className="w-4 h-4 mr-2" /> Approve & Send
                       </button>

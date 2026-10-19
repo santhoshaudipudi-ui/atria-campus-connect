@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, X, Mail, Phone, BookOpen, Sparkles, Building2, Filter, Home } from 'lucide-react';
+import { Search, MapPin, X, Mail, Phone, BookOpen, Sparkles, Building2, Filter, Home, Coffee } from 'lucide-react';
 
 export default function StaffSearch({ staffList }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,7 +27,7 @@ export default function StaffSearch({ staffList }) {
     return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
   };
 
-  // Upgraded Live Status Engine (Handles Holidays and After-Hours)
+  // Upgraded Live Status Engine
   const getLiveStatus = (staff) => {
     const schedule = staff.schedule || [];
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -56,6 +56,30 @@ export default function StaffSearch({ staffList }) {
       };
     }
 
+    // 3. GLOBAL COLLEGE BREAK TIMES (Updated to Atria's specific timings)
+    const isTeaBreak = currentMins >= 630 && currentMins < 645; // 10:30 AM to 10:45 AM
+    const isLunchBreak = currentMins >= 765 && currentMins < 810; // 12:45 PM to 1:30 PM
+
+    if (isLunchBreak) {
+      return {
+        statusType: 'break',
+        statusText: 'Lunch Break',
+        location: staff.cabin ? `Cabin: ${staff.cabin}` : 'Cabin: TBD',
+        activity: 'Lunch Time',
+        freeInfo: 'Faculty is currently on lunch break until 1:30 PM.'
+      };
+    }
+
+    if (isTeaBreak) {
+      return {
+        statusType: 'break',
+        statusText: 'Tea Break',
+        location: staff.cabin ? `Cabin: ${staff.cabin}` : 'Cabin: TBD',
+        activity: 'Short Break',
+        freeInfo: 'Faculty is on a short break until 10:45 AM.'
+      };
+    }
+
     const todaysClasses = schedule
       .filter(cls => cls.day === currentDay)
       .map(cls => ({
@@ -65,7 +89,7 @@ export default function StaffSearch({ staffList }) {
       }))
       .sort((a, b) => a.startMins - b.startMins);
 
-    // 3. Check if currently teaching a class
+    // 4. Check if currently teaching a class
     const activeClass = todaysClasses.find(
       cls => currentMins >= cls.startMins && currentMins < cls.endMins
     );
@@ -92,7 +116,7 @@ export default function StaffSearch({ staffList }) {
       };
     }
 
-    // 4. Find the next upcoming class today
+    // 5. Find the next upcoming class today
     const nextClass = todaysClasses.find(cls => cls.startMins > currentMins);
 
     if (nextClass) {
@@ -105,7 +129,7 @@ export default function StaffSearch({ staffList }) {
       };
     }
 
-    // 5. Done with all classes for the day, but still during college hours
+    // 6. Done with all classes for the day, but still during college hours
     return {
       statusType: 'available',
       statusText: 'Available',
@@ -208,10 +232,11 @@ export default function StaffSearch({ staffList }) {
                       <p className="text-xs font-semibold text-blue-700 mt-1">{staff.role}</p>
                     </div>
                     
-                    {/* Dynamic 3-State Badge */}
+                    {/* Dynamic Status Badge */}
                     <span className={`px-2 py-1 text-[10px] uppercase tracking-wider font-bold rounded-full border shrink-0 ${
                       liveStatus.statusType === 'available' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                       liveStatus.statusType === 'busy' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                      liveStatus.statusType === 'break' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                       'bg-slate-100 text-slate-500 border-slate-200'
                     }`}>
                       {liveStatus.statusText}
@@ -221,6 +246,8 @@ export default function StaffSearch({ staffList }) {
                   <div className="mt-4 flex items-center text-sm text-slate-600 font-medium">
                     {liveStatus.statusType === 'away' ? (
                       <Home className="w-4 h-4 mr-2 text-slate-400 shrink-0" />
+                    ) : liveStatus.statusType === 'break' ? (
+                      <Coffee className="w-4 h-4 mr-2 text-slate-400 shrink-0" />
                     ) : (
                       <MapPin className="w-4 h-4 mr-2 text-slate-400 shrink-0" />
                     )}
@@ -265,6 +292,8 @@ export default function StaffSearch({ staffList }) {
                 <div className="flex items-start">
                   {selectedStaff.liveStatus.statusType === 'away' ? (
                     <Home className="w-5 h-5 mr-3 text-slate-400 shrink-0 mt-0.5" />
+                  ) : selectedStaff.liveStatus.statusType === 'break' ? (
+                    <Coffee className="w-5 h-5 mr-3 text-slate-400 shrink-0 mt-0.5" />
                   ) : (
                     <MapPin className="w-5 h-5 mr-3 text-slate-700 shrink-0 mt-0.5" />
                   )}

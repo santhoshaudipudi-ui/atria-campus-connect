@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, CheckCircle, ShieldAlert, Upload } from 'lucide-react';
+import { Send, CheckCircle, ShieldAlert, Upload, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function StudentHODForm({ onSubmitRequest }) {
   const [formData, setFormData] = useState({
@@ -14,15 +14,42 @@ export default function StudentHODForm({ onSubmitRequest }) {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.idCardFile) {
-      alert('Error: You must upload your Student ID Card to submit this request.');
-      return;
+    setError('');
+
+    if (formData.usn.length < 10) {
+      setError('Please enter a valid 10-character USN.');
+      return; 
     }
-    onSubmitRequest(formData);
-    setSubmitted(true);
+
+    if (!formData.idCardFile) {
+      setError('You must upload your Student ID Card to submit this request.');
+      return; 
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // 1. Await the parent submission function and capture its response
+      const isSuccess = await onSubmitRequest(formData);
+
+      // 2. If the parent explicitly returns false (because of a mistake), STOP here.
+      if (isSuccess === false) {
+        setIsSubmitting(false);
+        return; 
+      }
+
+      // 3. Only show the success screen if no errors were returned
+      setSubmitted(true);
+    } catch (err) {
+      setError('Failed to submit request to the database. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -34,7 +61,10 @@ export default function StudentHODForm({ onSubmitRequest }) {
           Your appointment request has been sent. You can track the HOD's response below in the history section.
         </p>
         <button
-          onClick={() => { setSubmitted(false); setFormData({ ...formData, reason: '', idCardFile: null, docFile: null }); }}
+          onClick={() => { 
+            setSubmitted(false); 
+            setFormData({ ...formData, reason: '', idCardFile: null, docFile: null }); 
+          }}
           className="mt-6 px-6 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800 transition"
         >
           Submit Another Request
@@ -50,6 +80,13 @@ export default function StudentHODForm({ onSubmitRequest }) {
         <p className="text-sm text-slate-500">Fill in the details below to schedule a meeting with your Head of Department.</p>
       </div>
 
+      {error && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-md flex items-start space-x-3 text-sm">
+          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -61,7 +98,7 @@ export default function StudentHODForm({ onSubmitRequest }) {
             className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500"
             value={formData.studentName}
             onChange={(e) => setFormData({ ...formData, studentName: e.target.value })}
-            placeholder="Your Name as per college records "
+            placeholder="Your Name as per college records"
           />
         </div>
 
@@ -72,10 +109,10 @@ export default function StudentHODForm({ onSubmitRequest }) {
           <input
             type="text"
             required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500"
+            className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500 uppercase"
             value={formData.usn}
             onChange={(e) => setFormData({ ...formData, usn: e.target.value.toUpperCase() })}
-            placeholder="e.g. 1AT25CSXXX or 1TT25CSXXX"
+            placeholder="e.g. 1AT25CSXXX"
           />
         </div>
       </div>
@@ -90,7 +127,7 @@ export default function StudentHODForm({ onSubmitRequest }) {
             value={formData.department}
             onChange={(e) => setFormData({ ...formData, department: e.target.value })}
           >
-            <option value="CSE">CSE(CSE & Allied branches)</option>
+            <option value="CSE">CSE (CSE & Allied branches)</option>
             <option value="ECE">ECE</option>
             <option value="ME">Mechanical</option>
             <option value="CIVIL">Civil</option>
@@ -165,7 +202,7 @@ export default function StudentHODForm({ onSubmitRequest }) {
               type="file"
               required
               accept="image/*,.pdf"
-              className="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800"
+              className="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer"
               onChange={(e) => setFormData({ ...formData, idCardFile: e.target.files[0] })}
             />
           </div>
@@ -180,7 +217,7 @@ export default function StudentHODForm({ onSubmitRequest }) {
             <input
               type="file"
               accept="image/*,.pdf,.doc,.docx"
-              className="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-200 file:text-slate-800 hover:file:bg-slate-300"
+              className="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-200 file:text-slate-800 hover:file:bg-slate-300 cursor-pointer"
               onChange={(e) => setFormData({ ...formData, docFile: e.target.files[0] })}
             />
           </div>
@@ -189,10 +226,11 @@ export default function StudentHODForm({ onSubmitRequest }) {
 
       <button
         type="submit"
-        className="w-full py-2.5 bg-slate-900 text-white rounded-md font-medium hover:bg-slate-800 transition flex items-center justify-center space-x-2"
+        disabled={isSubmitting}
+        className={`w-full py-2.5 bg-slate-900 text-white rounded-md font-medium transition flex items-center justify-center space-x-2 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-slate-800'}`}
       >
-        <Send className="w-4 h-4" />
-        <span>Submit Request to HOD</span>
+        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+        <span>{isSubmitting ? 'Submitting Request...' : 'Submit Request to HOD'}</span>
       </button>
     </form>
   );
