@@ -110,22 +110,54 @@ export default function App() {
     setIsSignUp(false);
   };
 
+  // UPDATED: Now handles ImgBB upload and strictly returns true/false for the form component
   const handleNewRequest = async (newReq) => {
     // 1. Strict USN Validation Check
     const usnRegex = /^(1AT|1TT)25CS\d+$/i;
     if (newReq.usn && !usnRegex.test(newReq.usn)) {
       alert("Invalid USN format. It must start with 1AT25CS or 1TT25CS followed by numbers (e.g., 1AT25CS001).");
-      return; 
+      return false; // Tells the form to stop and stop spinning
     }
 
     const now = new Date();
-    const { idCardFile, additionalDocs, ...cleanRequestData } = newReq;
+    const { idCardFile, docFile, ...cleanRequestData } = newReq;
+    let idCardUrl = "";
 
-    // 2. Save only the text data to avoid the Blaze plan requirement
+    // 2. Bypass Firebase Storage: Upload the image to ImgBB instead
+    if (idCardFile) {
+      const imageFormData = new FormData();
+      imageFormData.append("image", idCardFile);
+
+      // Fetch the API key securely from your environment variables
+      const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
+      
+      try {
+        const uploadResponse = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+          method: "POST",
+          body: imageFormData,
+        });
+
+        const imgData = await uploadResponse.json();
+        
+        if (imgData.success) {
+          // Successfully got a free hosted link!
+          idCardUrl = imgData.data.url; 
+        } else {
+          alert("Image upload failed. Please try again.");
+          return false; // Stop the form submission
+        }
+      } catch (uploadError) {
+        console.error("ImgBB Upload Error:", uploadError);
+        alert("Image upload failed due to network error.");
+        return false;
+      }
+    }
+
+    // 3. Save only the text data to avoid the Blaze plan requirement
     const requestPayload = {
       ...cleanRequestData,
       idCardFileName: idCardFile ? idCardFile.name : 'No file uploaded',
-      idCardUrl: null, // Bypassing image storage to stay on the free tier
+      idCardUrl: idCardUrl, // This is now a lightweight plain text link
       email: loginEmail, 
       status: 'Pending',
       timestamp: `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
@@ -136,10 +168,11 @@ export default function App() {
     try {
       const docRef = await addDoc(collection(db, 'requests'), requestPayload);
       setRequests([{ ...requestPayload, id: docRef.id }, ...requests]);
-      alert("Request submitted successfully!");
+      return true; // Tells the form component to successfully show the green checkmark
     } catch (error) {
       console.error("Error adding document to cloud: ", error);
       alert("Failed to connect to the database. Please try again.");
+      return false; // Tells the form component it failed
     }
   };
 
@@ -383,12 +416,14 @@ export default function App() {
                         <div key={item.id} className="p-4 bg-slate-50 rounded-md border border-slate-200 space-y-2">
                           <div className="flex justify-between items-center text-xs text-slate-500">
                             <span>Submitted: {item.timestamp}</span>
-                            <span className="font-semibold text-slate-700 px-2 py-1 bg-white rounded border border-slate-200">{item.status}</span>
+                            <span className={`font-semibold px-2 py-1 bg-white rounded border ${item.status === 'Pending' ? 'border-amber-200 text-amber-700' : item.status === 'Approved' ? 'border-emerald-200 text-emerald-700' : 'border-rose-200 text-rose-700'}`}>
+                              {item.status}
+                            </span>
                           </div>
                           <p className="text-sm text-slate-800"><strong>Reason:</strong> {item.reason}</p>
                           <div className="p-3 bg-white border border-slate-200 rounded text-xs mt-2">
                             <span className="font-bold text-slate-700">HOD Response: </span>
-                            {item.hodReply ? <span className="text-emerald-700 font-medium">{item.hodReply}</span> : <span className="text-slate-400 italic">Awaiting response from HOD office...</span>}
+                            {item.hodReply ? <span className="text-slate-800 font-medium">{item.hodReply}</span> : <span className="text-slate-400 italic">Awaiting response from HOD office...</span>}
                           </div>
                         </div>
                       ))
