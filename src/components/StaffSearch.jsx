@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, X, Mail, Phone, BookOpen, Sparkles, Building2, Filter, Home, Coffee } from 'lucide-react';
+import { Search, MapPin, X, Mail, Phone, BookOpen, Sparkles, Building2, Filter, Home, Coffee, User } from 'lucide-react';
 
 export default function StaffSearch({ staffList }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -227,9 +227,17 @@ export default function StaffSearch({ staffList }) {
               >
                 <div>
                   <div className="flex justify-between items-start gap-2">
-                    <div>
-                      <h3 className="font-bold text-slate-900">{staff.name}</h3>
-                      <p className="text-xs font-semibold text-blue-700 mt-1">{staff.role}</p>
+                    
+                    {/* Added Avatar and Designation inside the Grid Card */}
+                    <div className="flex items-start space-x-3">
+                      <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center border border-slate-200 shrink-0">
+                        <User className="w-6 h-6 text-slate-400" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900">{staff.name}</h3>
+                        <p className="text-xs font-bold text-slate-600 mt-0.5">{staff.designation || 'TBD'}</p>
+                        <p className="text-xs font-semibold text-blue-700 mt-0.5">{staff.role}</p>
+                      </div>
                     </div>
                     
                     {/* Dynamic Status Badge */}
@@ -277,12 +285,19 @@ export default function StaffSearch({ staffList }) {
 
             <div className="p-6 overflow-y-auto space-y-6">
               
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">{selectedStaff.name}</h1>
-                <p className="text-sm font-semibold text-blue-700 mt-1">{selectedStaff.role}</p>
-                <div className="flex items-center text-sm text-slate-500 mt-2">
-                  <Building2 className="w-4 h-4 mr-2 shrink-0" />
-                  {getDepartment(selectedStaff.email)}
+              {/* Added Avatar and Designation inside the Modal */}
+              <div className="flex items-start space-x-4">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center border-2 border-slate-100 shadow-sm shrink-0">
+                  <User className="w-8 h-8 text-slate-400" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900">{selectedStaff.name}</h1>
+                  <p className="text-sm font-bold text-slate-700 mt-1">{selectedStaff.designation || 'TBD'}</p>
+                  <p className="text-sm font-semibold text-blue-700 mt-0.5">{selectedStaff.role}</p>
+                  <div className="flex items-center text-sm text-slate-500 mt-1.5">
+                    <Building2 className="w-4 h-4 mr-2 shrink-0" />
+                    {getDepartment(selectedStaff.email)}
+                  </div>
                 </div>
               </div>
 
