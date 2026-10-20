@@ -84,7 +84,7 @@ export default function App() {
     const OFFICIAL_HOD_EMAIL = 'hod.cse@atria.edu.in';
     
     if (hodEmail.toLowerCase() !== OFFICIAL_HOD_EMAIL) {
-      setHodError(`Access denied: Only ${OFFICIAL_HOD_EMAIL} is authorized for this portal.`);
+      setHodError(`Access denied: Only HOD is authorized for this portal.`);
       return;
     }
     
@@ -311,7 +311,7 @@ export default function App() {
                 <label className="text-sm font-medium text-slate-700">Official HOD Email</label>
                 <div className="relative">
                   <Mail className="w-5 h-5 text-slate-400 absolute left-3 top-2.5" />
-                  <input type="email" required placeholder="hod@atria.edu.in" className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900" value={hodEmail} onChange={(e) => setHodEmail(e.target.value)} />
+                  <input type="email" required placeholder="staff@atria.edu.in" className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900" value={hodEmail} onChange={(e) => setHodEmail(e.target.value)} />
                 </div>
               </div>
               <div className="space-y-1">
